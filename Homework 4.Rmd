@@ -1,0 +1,132 @@
+---
+title: "Homework 4"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Library
+```{r}
+library (ISLR)
+```
+
+# The stock market data
+```{r}
+attach(Smarket)
+```
+
+# Fit and find probabilites of a logistic regression model
+```{r}
+glm.fit=glm(Direction ~ Lag1+Lag2+Lag3+Lag4+Lag5+Volume ,
+data=Smarket ,family =binomial)
+glm.probs =predict(glm.fit ,type ="response")
+```
+
+
+# Threshold = .35
+```{r}
+#Direction
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.35]=" Up"
+table(glm.pred, Direction )
+
+# There is no actual Down values for this since the threshold is so low.
+```
+
+# Threshold = .4
+```{r}
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.4]=" Up"
+table(glm.pred ,Direction )
+
+# Same result as the the threshold being .35. It is to low to have any values being actually down.
+```
+
+# Threshold = .45
+```{r}
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.45]=" Up"
+table(glm.pred ,Direction )
+
+# Now that the treshold is high enough we are finally getting values being classified as being down. Not much though.
+```
+
+# Threshold = .5
+```{r}
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.5]=" Up"
+table(glm.pred ,Direction )
+
+# These are actually really balanced results compared to the other thresholds but not good enough
+```
+
+# Threshold = .55
+```{r}
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.55]=" Up"
+table(glm.pred ,Direction )
+
+# Now there is a lot of down values so a good threshold value is probably inbetween .5 - .55
+```
+
+# Threshold = .6
+```{r}
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.6]=" Up"
+table(glm.pred ,Direction )
+
+# There is not a lot of values in the actual up now hence the threshold is starting to get to high to be practical
+```
+
+# Threshold = .65
+```{r}
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.65]=" Up"
+table(glm.pred ,Direction )
+
+# the value of the threshold is to high now and this will be the same for the rest of the thresholds.
+```
+
+# Threshold = .7
+```{r}
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.7]=" Up"
+table(glm.pred ,Direction )
+```
+
+# Threshold = .75
+```{r}
+glm.pred=rep ("Down ",1250)
+glm.pred[glm.probs >.75]=" Up"
+table(glm.pred ,Direction )
+```
+
+# Conclusion
+```{r}
+# As we can see from the multiple thresholds there is a clear distinction of what thresholds are weighted either towards being predicted downwards vs being predicted upwards. THe middle group is around .5 - .55. that is where the ideal threshold will be. 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

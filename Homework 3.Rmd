@@ -1,0 +1,227 @@
+---
+title: 'HW3: MDSR Appendix E'
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Exercises E.1(Parts 1-5),E.3, E.6
+
+# E.1
+```{r}
+library(mosaicData)
+library(mosaic)
+library(mdsr)
+library(broom)
+# glimpse(HELPrct)
+# fm <- lm(cesd ~ substance + mcs + sex + homeless, data = HELPrct)
+# msummary(fm)
+```
+
+
+# E.1 Part 1 
+```{r}
+# The linear model will be: 
+#                 ^y = 57.7794 -3.5406(^x1) -1.6818(^x2) -0.6407(^x3) -3.3239(^x4) -0.8327(^x5)
+#
+#          ^y = CESD score, depression scale
+#
+#          ^x1 = substance cocaine (x=1 if they use cocaine and x=0 if they do not)
+#                       Categorical Variable
+#
+#          ^x2 = subst   2.5%   97.5%
+# substance cocaine       -5.526  -1.555
+#
+#     This means that when the subject does cocaine they are 95% confident that the CESD score will
+#     decrease by some value within this interval.
+#
+
+```
+
+
+# E.1 Part 4
+```{r}
+# Make a conclusion and summarize the results of a test of the homeless parameter
+#
+#     In summary I believe the homelesshoused data is not significant enough to keep in this 
+# linear regression. The homelesshoused data shows that the standard error is greater then the 
+# magnitude of the prediction which shows major insignificance. Then there PR(>|t|) was 
+#.3383(33.82%) which shows even more insignificance. ance heroin (x=1 if they use heroin and x=0 if they do not)
+#                       Categorical Variable
+#
+#          ^x3 = mcs (a measure of mental well-being)  
+#                       Numerical Variable
+#
+#          ^x4 = sexmale (x=1 if they are a male and x=0 if they are not)
+#                       Categorical Variable
+#
+#          ^x5 = homelesshoused (x=1 if they are housed and x=0 if they are not)
+#                       Categorical Variable
+#
+
+```
+
+
+# E.1 Part 2
+```{r}
+# Find the CESD for a female homeless cocaine-involved subject with a MCS score of 20
+#
+#                 ^y = 57.7794 -3.5406(^x1) -1.6818(^x2) -0.6407(^x3) -3.3239(^x4) -0.8327(^x5)
+#                 ^y = 57.7794 -3.5406(1) -1.6818(0) -0.6407(20) -3.3239(0) -0.8327(0)
+#                 ^y = 57.7794 -3.5406 -0.6407(20)
+#                 ^y = 41.4248
+#
+# According to our linear model the CESD for a female homeless cacain-involved subject with a MCS
+# score of 20 will have a CESD score of 41.4248
+#
+
+```
+
+
+# E.1 Part 3
+```{r}
+# Interpret the 95% confidence interval for the substancecocaine coefficient.
+#
+#     The 95% confidence interval for the drop in CESD because of cocaine will be between
+#
+#                       
+#
+
+```
+
+
+# E.1 Part 5
+```{r}
+# Report and interpret the R^2 (coefficient of determination) for this model.
+#
+#   We would use the Adjusted R-squared: 0.486 which would be interpreted as: This linear regression explains 48.6% of the variance. This is not a bad value of R^2 as it is
+# basically guessing 50% of the variance successfully. I am sure if you took out the homelesshoused 
+# data this number would get higher.
+#
+
+```
+
+
+
+
+# E.4
+```{r}
+library(mdsr)
+babies <- Gestation %>%
+  rename(bwt = wt, height = ht, weight = wt.1) %>%
+  mutate(parity = parity == 0, smoke = smoke > 0) %>%
+  select(id, bwt, gestation, age, height, weight, parity, smoke)
+mod <- lm(bwt ~ gestation + age + height + weight + parity + smoke,
+  data = babies)
+glimpse(Gestation)
+```
+
+
+# E.4 Part 1
+```{r}
+mod <- lm(wt ~ age,data = Gestation)
+msummary(mod)
+
+
+# This will give us a linear regression model of
+#
+#      wt^ = 116.683465 + 0.10622*age
+#
+# wt^ = predicted birth weight
+# age = age of mother
+
+
+```
+
+
+# E.4 Part 2
+```{r}
+confint(mod)
+
+# we get a 95% confidence interval of [111,121] and for age it is [-.0701,0.2826]. The first interval we are 95% confident that the values will be between those values and for age we are 96% positive that the coefficient are between those values. The P value was shown in the code before. The P value is 0.2375.
+```
+
+
+# E.4 Part 3
+```{r}
+# I am confident that age is not a significant attribute. I can tell this of many ways. First is the 95% confidence interval. When looking at the 95% confidence interval the age coefficient crosses zero which shows that there is a chance it means nothing to the predicted value. Secondly, the standard error is almost the same value as the coefficient which means that there is high chance of error. Lastly the Pr(>|t|) is more then. .05 which means it is insignificant. 
+```
+
+
+
+# E.6
+```{r}
+# The atus package includes data from the American Time Use Survey (ATUS). Use the
+# atusresp dataset to model hourly wage as a function of other predictors in the dataset.
+
+library(atus)
+
+# glimpse(atusresp)
+# Resp <- subset(atusresp, select = -c(holiday, occup_code, ind_code, labor_status, student_status, ptft, work_class,mult_jobs,partner_works,partner_ptft, # # # partner_hh,hh_child)) %>%
+# na.omit
+# res <- cor(Resp)
+# res
+#                        Those codes were so I could look at the correlations between the numerical variables 
+#                         and see if I could get a lead on some significant data
+
+
+
+mod <- lm(hourly_wage ~ weekly_earn + work_hrs_week + ptft + occup_code, data = atusresp)
+msummary(mod)
+
+# This having a adjusted R squared value of .6514 and having great Pr(>|t|) values makes,
+# this statistical model statistically significant. The only potential issue is the T values of
+# weekly_earn. But other than that this is significant!
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

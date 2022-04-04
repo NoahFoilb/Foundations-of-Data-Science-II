@@ -1,0 +1,467 @@
+---
+title: "Final Project"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Load in libraries
+```{r}
+library(dplyr)
+library(mdsr)
+library(NHANES)
+library(broom)
+library(mosaicData)
+library(mosaic)
+library(mdsr)
+library(ggplot2)
+library(randomForest)
+library(mosaicCore)
+library(readxl)
+library(rpart.plot)
+library(rpart)
+library(nnet)
+library(NeuralNetTools)
+library(class)
+library(e1071)
+library(neuralnet)
+```
+
+
+# Load in dataset 
+```{r}
+Ames <- read.csv("Ames.csv",quote = "")
+```
+
+# Lets look at the Na values
+```{r}
+summary(Ames)
+```
+
+
+# Lets look at the dataset column by column
+```{r}
+Ames <- read.csv("Ames.csv",quote = "")
+
+# PID & Order 
+Ames = subset(Ames, select = -c(PID,Order,Utilities, Roof.Matl,Bsmt.Cond))    # Get rid of these as these will mess up the models
+
+# LotFrontage 
+Ames[c("Lot.Frontage")][is.na(Ames[c("Lot.Frontage")])] <- 0
+
+# Alley
+Ames[c("Alley")][is.na(Ames[c("Alley")])] <- "No Alley"
+
+# MasVnrArea
+Ames[c("Mas.Vnr.Area")][is.na(Ames[c("Mas.Vnr.Area")])] <- 0
+
+# Garage.Yr.Blt
+Ames[c("Garage.Yr.Blt")][is.na(Ames[c("Garage.Yr.Blt")])] <- 1978
+
+# Fireplace.Qu
+Ames[c("Fireplace.Qu")][is.na(Ames[c("Fireplace.Qu")])] <- "No Fireplace"
+
+# Garage.Type
+Ames[c("Garage.Type")][is.na(Ames[c("Garage.Type")])] <- "No Garage"
+
+# Garage.Finish
+Ames[c("Garage.Finish")][is.na(Ames[c("Garage.Finish")])] <- "No Garage"
+
+# Garage.Quality
+Ames[c("Garage.Qual")][is.na(Ames[c("Garage.Qual")])] <- "No Garage"
+
+# Garage.Cond
+Ames[c("Garage.Cond")][is.na(Ames[c("Garage.Cond")])] <- "No Garage"
+
+# Bsmt.Qual
+Ames[c("Bsmt.Qual")][is.na(Ames[c("Bsmt.Qual")])] <- "No Basement"
+
+# Bsmt.Cond
+#Ames[c("Bsmt.Cond")][is.na(Ames[c("Bsmt.Cond")])] <- "No Basement"
+
+# Bsmt.Exposure
+Ames[c("Bsmt.Exposure")][is.na(Ames[c("Bsmt.Exposure")])] <- "No Basement"
+
+# BsmtFin.Type.1
+Ames[c("BsmtFin.Type.1")][is.na(Ames[c("BsmtFin.Type.1")])] <- "No Basement"
+
+# BsmtFin.Type.2
+Ames[c("BsmtFin.Type.2")][is.na(Ames[c("BsmtFin.Type.2")])] <- "No Basement"
+
+# Pool.QC
+Ames[c("Pool.QC")][is.na(Ames[c("Pool.QC")])] <- "No Pool"
+
+# Fence
+Ames[c("Fence")][is.na(Ames[c("Fence")])] <- "No Fence"
+
+# Misc.Feature
+Ames[c("Misc.Feature")][is.na(Ames[c("Misc.Feature")])] <- "None"
+
+
+# We also only want where the sales conidtion is normal so
+Ames <- Ames %>%
+  filter(Sale.Condition == "Normal") %>%
+  na.omit()
+
+# Fix MS.Zoning (This Became an issue later on)
+Ames[Ames$MS.Zoning == "C (all)","MS.Zoning"] <- "Other"
+Ames[Ames$MS.Zoning == "A (agr)","MS.Zoning"] <- "Other"
+Ames[Ames$MS.Zoning == "I (all)","MS.Zoning"] <- "Other"
+
+```
+
+
+# Correlation
+```{r}
+Ames_Quan <- Ames %>%
+  select(SalePrice,MS.SubClass,Lot.Area,Lot.Frontage,Overall.Qual,Overall.Cond, Year.Built, Year.Remod.Add,Mas.Vnr.Area,BsmtFin.SF.1,BsmtFin.SF.2, Bsmt.Unf.SF, Total.Bsmt.SF, X1st.Flr.SF, X2nd.Flr.SF,Low.Qual.Fin.SF,Gr.Liv.Area, Bsmt.Full.Bath,Bsmt.Half.Bath,Full.Bath,Half.Bath,Bedroom.AbvGr,Kitchen.AbvGr,TotRms.AbvGrd,Fireplaces,Garage.Yr.Blt,Garage.Cars,Garage.Area,Wood.Deck.SF,Open.Porch.SF,Enclosed.Porch,X3Ssn.Porch,Screen.Porch,Pool.Area,Misc.Val,Mo.Sold,Yr.Sold)
+# Can only select numerical attributes
+
+cor(Ames_Quan)
+```
+
+# Train and Test Datasets
+```{r}
+set.seed(100)
+train <- Ames %>% sample_frac(size = 0.75)
+test <- Ames %>% setdiff(train)
+```
+
+
+
+# SalePrice
+```{r}
+# The target variable for my project will SalePrice as I will be trying to predict the amount a house is worth when given specific information about the house. 
+```
+
+# Null Model for SalePrice
+```{r}
+Null.mod <- lm(SalePrice~1,data=train)
+msummary(Null.mod)
+```
+
+# Null Model Test
+```{r}
+pred1 <- predict(Null.mod, newdata = test)
+results <- data.frame(pred = pred1, original = test$SalePrice)
+results$resid<-round(results$pred-results$original,0)
+MSE = (sum(results$resid^2)/length(results))
+RMSE <- as.integer(round(sqrt(MSE)/100)*100)
+RMSE  
+```
+
+
+
+# Null Model Visualization
+```{r}
+ggplot(data = Ames, aes(x = Overall.Qual, y = SalePrice/1000)) +geom_point() + geom_jitter(width = .49)+geom_hline(yintercept = 175.714, color = "red",size = 1.3)  + ggtitle("High Correlation betwen SalePrice and Overall.Qual") + xlab("Overall Quality of house") + ylab("Price per 1k") + annotate(geom = "text",x=1.4,y = 250, label = "Null Model↓")
+```
+
+# Null Model Analysis
+```{r}
+# The Null model is what is expected of it. It estimates every price to be 175,714$. This model is not good but will be used for reference for the other models.
+```
+
+# Multiple Regression Model for SalePrice
+```{r}
+lin.mod <- lm(SalePrice ~Overall.Qual+ Overall.Cond + Year.Built + Gr.Liv.Area + Total.Bsmt.SF +  Full.Bath + Year.Built + Year.Remod.Add + Mas.Vnr.Area + Garage.Cars,  data = train)
+msummary(lin.mod)
+confint(lin.mod)
+```
+
+# Multiple Regression Model Test 
+```{r}
+pred1 <- predict(lin.mod, newdata = test)
+results <- data.frame(pred = pred1, original = test$SalePrice)
+results$resid<-round(results$pred-results$original,0)
+MSE = (sum(results$resid^2)/length(results))
+RMSE <- as.integer(round(sqrt(MSE)/100)*100)
+RMSE
+```
+
+
+# Mulitple Regression Model Visualization
+```{r}
+ggplot(data = Ames, aes(x = Gr.Liv.Area, y = SalePrice/1000, color = Overall.Qual)) + geom_point() + geom_jitter(width = .49) + geom_smooth(stat = "lm") + ggtitle("High Correlation Between SalePrice and Gr.Liv.Area") + xlab("Ground Floor Living Area") + ylab("Price per 1k")
+```
+
+# Multiple Regression Model Analysis 
+```{r}
+# This is a great model but it does not work well on the dataset according to the residuals. The model itself shows no type of error as it has great P values, T values, 95% confidence interval makes sense and the Adj R^2 is great! I also believe the residual error gets punished to much by ^2 it. As the higher the residuals the greater it gets punished so when using data with naturally higher numbers it gets to become a higher error. So instead I compared it with the RMSE which would be 415,000$ difference.
+
+# This isnt my first model. I toyed around with different predictors, both categorical and numerical. Most categorical variables were not statistically significant or didnt effect the model and I believe in KISS (Keep it simple stupid).
+
+# Compared to the Null Model this model is great! The RMSE is much less then the Null models RMSE, by over half!
+```
+
+
+
+
+
+# Regression Tree Model for SalePrice
+```{r}
+form<-as.formula("SalePrice ~ .")
+Reg_tree <- rpart(form, data=train)
+Reg_tree
+```
+
+# Regression Tree Model Test 
+```{r}
+pred1 <- predict(Reg_tree, newdata = test)
+results <- data.frame(pred = pred1, original = test$SalePrice)
+results$resid<-round(results$pred-results$original,0)
+MSE = (sum(results$resid^2)/length(results))
+RMSE <- as.integer(round(sqrt(MSE)/100)*100)
+RMSE
+```
+
+# Regression Tree Model Visualization
+```{r}
+rpart.plot(Reg_tree)
+```
+
+# Regression Tree Model Analysis
+```{r}
+# While the Regression Tree does look more sophisticated it preforms worse then the Multiple Regression Model as the RMSE is now 531400$. As this is worse, I will be using the Multiple Regression Model.
+```
+
+
+
+
+
+
+
+
+
+
+
+# Random Forest Model for SalePrice
+```{r}
+Ran_tree <-randomForest(form, data=train, ntree=400, mtry=20)
+Ran_tree
+```
+# Random Forest Model Test 
+```{r}
+pred1 <- predict(Ran_tree, newdata = test)
+results <- data.frame(pred = pred1, original = test$SalePrice)
+results$resid<-round(results$pred-results$original,0)
+MSE = (sum(results$resid^2)/length(results))
+RMSE <- as.integer(round(sqrt(MSE)/100)*100)
+RMSE
+```
+
+# Random Forest Model Analysis
+```{r}
+# The Random Forest Model is by far the best Model created. The first ting I noticed was the high Variance. This model explains 92% of the variance which is higher then the rest. But also the RMSE is ~ 320,000$ which is the best so far!
+```
+
+
+
+
+
+
+
+
+# Overall.Qual (> 6)
+```{r}
+Ames <- Ames %>%
+  mutate(Overall.Binary = if_else(Overall.Qual < 7, 0,1))
+
+# I created my own categorical binary column to predict if the overall quality is 7 or above. This is for people interested in buying a good home. 
+```
+
+# Train and Test Datasets
+```{r}
+set.seed(100)
+train <- Ames %>% sample_frac(size = 0.75)
+test <- Ames %>% setdiff(train)
+```
+
+
+
+
+# Null Model for Overall.Binary
+```{r}
+Null.mod <- glm( Overall.Binary ~ 1,data=train,family = binomial)
+Null.mod
+```
+
+# Null Model Test
+```{r}
+table(train$Overall.Binary)/sum(table(train$Overall.Binary))*100   
+# 66.7% Accurate
+```
+
+# Null Model Visualization
+```{r}
+ggplot(data = Ames, aes(x = Overall.Qual, y = SalePrice/1000)) +geom_point() + geom_jitter(width = .45,height = .01)  + ggtitle("Null Model") + xlab("Overall Quality of house") + ylab("Price per 1k") + geom_vline(xintercept = 7,color = "red", size = 1.3)+ annotate(geom = "text",x=6,y = 600, label = "Null Model→")
+```
+
+# Null Model Analysis
+```{r}
+# This null model Assumes that the overall Quality of a house is below 7/10 and is 66.77% accurate in doing so. 
+```
+  
+# Logisitic Regression Classifier for Overall.Binary
+```{r}
+Log.Cla <- glm(Overall.Binary ~ SalePrice  + Gr.Liv.Area + Garage.Cars +Lot.Area, data = train, family = "binomial")
+msummary(Log.Cla)
+confint(Log.Cla)
+```
+
+# Logisitic Regression Classifier Test
+```{r}
+logreg.probs = predict(Log.Cla,train,type="response")
+logreg.pred = rep("0",1809)
+logreg.pred[logreg.probs>.41]="1"
+confusion <- table(logreg.pred, train$Overall.Binary)
+confusion
+sum(diag(confusion))/nrow(train)
+```
+
+# Logisitic Regression Classifier Visualization
+```{r}
+ggplot(data = Ames, aes(x = SalePrice/1000, y = Overall.Binary)) + geom_jitter(width = .1, height = .1) + geom_smooth(method = "glm", method.args = list(family = "binomial"),se = FALSE) + ggtitle("Logistic Regression for houses that have an overall quality > 6") + xlab("Price per 1k") + ylab("Overall Quality > 7") #+ geom_hline(yintercept = .41, color = "red", size = 1.3) #+ annotate(geom = "text",x=350,y = .5, label = "Threshold Value (.41) ↓")
+```
+
+# Logisitic Regression Classifier Analysis
+```{r}
+# By selecting a threshold valye of .41 we can achieve an optimal accuracy of 87%. This is the best model I could come up with and by messing with all the variables, non seemed to change the Null Deviance or residual deviance at all. This was an okay model but still did better then the Null model. 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Decision Tree Classifier for Overall.Binary
+```{r}
+test$Overall.Binary <- factor(test$Overall.Binary)
+train$Overall.Binary <- factor(train$Overall.Binary)
+
+form <- as.formula("Overall.Binary ~ . -Overall.Qual")
+Dec_tree <- rpart(form,data = train)
+Dec_tree
+```
+
+# Decision Tree Classifer 
+```{r}
+T_pred = predict(Dec_tree,test,type ="class")
+confusion <- table(test$Overall.Binary,T_pred)
+confusion
+
+Accuracy <- sum(diag(confusion))/sum(confusion)
+Accuracy
+```
+
+# Decision Tree Classifer Visualization
+```{r}
+rpart.plot(Dec_tree)
+```
+
+# Decision Tree Classifer Analysis 
+```{r}
+# This decision tree is about the same accuracy as the logistic regression classifier. The big upside in using this model is it goes through every variable and detects the most important variables and uses them for the decision tree. So while the Logistic regression model is better accuracy (by 1%) I would choose the decision tree as it gets rid of most of the human error. 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Random Forest Classifier for Overall.Binary
+```{r}
+Ran_tree <-randomForest(form, data=train, ntree=400, mtry=20)
+Ran_tree
+```
+# Random Forest Classifier Test 
+```{r}
+sum(diag(Ran_tree$confusion))/nrow(train)
+```
+
+# Random Forest Classifier Analysis
+```{r}
+# The Random Forest Model is by far the best classifier created. This model is 90% accurate! and with a low OOb estimate of error rate of 10.17% this is by far the best Classifier. 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

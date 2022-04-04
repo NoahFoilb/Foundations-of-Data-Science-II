@@ -1,0 +1,675 @@
+---
+title: "Test 2"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Noah Foilb
+
+# Library
+```{r}
+# Load the libraries
+library(ISLR)
+library(dplyr)
+library(NHANES)
+library(broom)
+library(mosaicData)
+library(mosaic)
+library(mdsr)
+library(ggplot2)
+library(randomForest)
+library(mosaicCore)
+library(readr)
+library(rpart.plot)
+library(rpart)
+```
+
+
+
+# 1)  The ISLR package includes the Carseats dataset, which includes information about car seat sales in 400 stores. You will need to use this dataset to model the variable Sales as a function of other predictors in the dataset. 
+# Check Dataset
+```{r}
+glimpse(Carseats)
+summary(Carseats)
+# There is no Na values! but only 400 rows, this may lead to some issues as we do not have a lot of data. 
+```
+
+# a) Find the best possible multiple linear regression model, provide full documentation and interpret your results
+# Check the correlations
+```{r}
+Car <- subset(Carseats, select = -c(ShelveLoc,Urban,US))    # can not have fct type variables in cor function
+cor(Car)
+# There doesnt seem to be a lot of correlations between each predictors if our target attribute is Sales
+```
+
+# Lets compare Sales with each predictor
+```{r}
+# Model that predicts # of sales by Comprice
+Test <- lm(Sales~CompPrice, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts # of sales by Income
+Test <- lm(Sales~Income, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts # of sales by Advertising
+Test <- lm(Sales~Advertising, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts # of sales by Population
+Test <- lm(Sales~Population, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts # of sales by Price
+Test <- lm(Sales~Price, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts # of sales by Age
+Test <- lm(Sales~Age, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# Model that predicts # of sales by Education
+Test <- lm(Sales~Education, data = Car)
+msummary(Test)
+confint(Test)
+```
+
+# Interpret the first round of predictors
+```{r}
+# Comprice is not signifigantly significant as the Pr value is 20% and the 95% interval includes zero
+# Income is potentially good, it is statistically signifigant but Im not sure it will contribute enough to the model
+# Advertising is good!
+# Population is not good, not only does the 95% confidence interval crosses 0% but the Pr value is 35%
+# Price is the best! I will be using this for the next round of predictors
+# Age is not bad and may be a potential additional predictor.
+# Education is not good, the 95% confidence interval includes 0 and the Pr value is 30%
+```
+
+# Lets look at if we can add addition predictors to the model alongside with Price
+```{r}
+# Model that predicts # of sales by Price and Income
+Test <- lm(Sales~Price+Income, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts # of sales by Price and Advertising
+Test <- lm(Sales~Price+Advertising, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts # of sales by Price and Age
+Test <- lm(Sales~Price+Age, data = Car)
+msummary(Test)
+confint(Test)
+```
+
+# Interpret the Second round of predictors
+```{r}
+# They are all good predictors! I will be keeping Age as it increases the R^2 value the most
+```
+
+
+
+# Lets look at if we can add addition predictors to the model alongside with Price and Age then with all predictors
+```{r}
+# Model that predicts # of sales by Price, Age and Income
+Test <- lm(Sales~Price+Age+Income, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts # of sales by Price, Age and Advertising
+Test <- lm(Sales~Price+Age+Advertising, data = Car)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# Model that predicts # of sales by Price, Age, Advertising and Income
+Test <- lm(Sales~Price+Age+Advertising+Income, data = Car)
+msummary(Test)
+confint(Test)
+```
+
+# Interpret the last round of predictors, Which model I will be using.
+```{r}
+# I will be using this model as it has the highest Adjusted R^2 value and every value is statistically significant
+Test <- lm(Sales~Price+Age+Advertising+Income, data = Carseats)
+msummary(Test)
+confint(Test)
+```
+
+# Before we move on lets look at categorical variables
+```{r}
+boxplot(Carseats$Sales ~ Carseats$ShelveLoc)
+# There seems to be a big correlation between Sales and the condition of the car seats. As the quality increases, all of the 5 number summary values increase as well.
+
+boxplot(Carseats$Sales ~ Carseats$Urban)
+# There does seem to be a correlation as there was no change. It was as if you split the data in half
+
+boxplot(Carseats$Sales ~ Carseats$US)
+# There does seem to be a correlation as there was no change. It was as if you split the data in half
+```
+
+# Lets see how ShelveLoc does
+```{r}
+Test <- lm(Sales~ShelveLoc, data = Carseats)
+msummary(Test)
+confint(Test)
+# This is great! lets use this with our previous model and see how it does
+```
+
+# Final Model
+```{r}
+Test <- lm(Sales~Price+Age+Advertising+Income+ShelveLoc, data = Carseats)
+msummary(Test)
+confint(Test)
+
+# I will verifiy if this is an effective model in part E!
+```
+
+
+
+
+# b) Build a Decision tree!
+```{r}
+form<-as.formula("Sales ~ .")
+tree.mod <- rpart(form, data=Carseats)
+tree.mod
+
+# I am not sure if this is a great model or not, I will verify this in part E!
+```
+
+
+# c) Plot and fully interpret the decision tree
+# Lets plot the tree
+```{r}
+rpart.plot(tree.mod)
+```
+
+# Interpret
+```{r}
+# This is a decision tree! I used the the decisions the program would think are significant enough to use! Which conveniently are similar to the ones I used in my multiple regression model and the ones I was going to use for this model as well except the CompPrice. 
+# I can picture this is not going to go well as it is very specific and a lot of branches
+```
+
+
+
+
+# d) Build at least three random forest models and interpret the results
+# Lets make our first model
+```{r}
+# Lets try a basic model that uses all attributes
+form <- as.formula("Sales ~ .")
+forest_mod <- randomForest(form, data = Carseats, ntree = 300, mtry = 2)
+forest_mod
+```
+
+# Interpret the first model
+```{r}
+# This model is good! 60% of the variance is explained and the mean residual^2 is only 3.14!
+```
+
+# Lets make our second model
+```{r}
+# Lets try a basic model that uses all attributes but this time change up the number of trees
+form <- as.formula("Sales ~ .")
+forest_mod <- randomForest(form, data = Carseats, ntree = 1000, mtry = 2)
+forest_mod
+```
+
+# Interpret the second model
+```{r}
+# This model is good! 60% of the variance is explained and the mean residual^2 is only 3.14!
+```
+
+# Lets make our third and final model
+```{r}
+# This time I will be using the predictors I found were signifigant in my multiple linear regression
+form <- as.formula("Sales~Price+Age+Advertising+Income+ShelveLoc")
+forest_mod <- randomForest(form, data = Carseats, ntree = 1000, mtry = 2)
+forest_mod
+```
+
+# Interpret the third model
+```{r}
+# This is the best random tree model! Not by much but this model has the best mean residual^2 and variance explained
+```
+
+
+
+
+# e) Compare the effectiveness of each model I made and state my conclusion 
+# Multiple Linear Regression Model
+```{r}
+set.seed(500)
+n<-nrow(Carseats)
+test_idx<-sample.int(n, size=round(0.2*n))
+train<-Carseats[-test_idx,]
+
+test<-Carseats[test_idx,]
+mod<-lm(Sales~Price+Age+Advertising+Income+ShelveLoc, data = Carseats)
+pred1 <- predict(mod, newdata = test)
+results <- data.frame(pred = pred1, original = test$Sales)
+results$resid<-round(results$pred-results$original,0)
+
+#results
+print(sum(results$resid^2))
+
+# The Resudial^2 Is so low! This proves this is an effective model!
+```
+
+
+# Decision tree
+```{r}
+printcp(tree.mod)
+# This is not a good model, the rel errors are terrible (Fraction of mislabeled elements), the Root Node error is bad, the xerror and xstd.
+# This is not a significant model.
+```
+
+
+
+
+
+
+# 2 The mlbench package contains the PimaIndiansDiabetes dataset, which includes information about predicting the onset of diabetes in female Pima Indians from medical record data. You will need to use this dataset to model the variable diabetes as a function of other predictors in the dataset. 
+```{r}
+library(mlbench)
+data(PimaIndiansDiabetes)
+Pima <- PimaIndiansDiabetes
+Pima <- Pima[!Pima$mass == 0,]
+```
+
+#Check the Dataset
+```{r}
+glimpse(Pima)
+summary(Pima)
+# There is no Na values! but there is some suspicious data.
+# How does one have no mass?
+# How does one have no pressure?
+# Glucose?
+
+Pima <- Pima[!Pima$mass == 0,]
+Pima <- Pima[!Pima$glucose == 0,]
+# This fixs the outliers
+```
+
+
+# a) Null Model
+# Make the model
+```{r}
+glm(diabetes~1,data = Pima, family = "binomial")
+#The coefficients will be -0.623
+```
+
+# Interpret 
+```{r}
+table(Pima$diabetes)/sum(table(Pima$diabetes))*100
+# Since the null model will always guess they dont have any Diabetes this model has a 65% accuracy
+```
+
+
+# b) Logistic Regression Model
+# Lets look at the correlations between the potential qualitiative predictors
+```{r}
+Pima_q <- subset(Pima, select = -c(diabetes))    # can not have fct type variables in cor function
+cor(Pima_q)
+# The only predictors that have some kind of signifigant correlation between eachother is 
+# age - pregnant
+# Insulin - tricepts
+# mass - tricepts 
+```
+
+# Lets build our first models using every predictor once
+```{r}
+# Model that predicts diabetes by pregnant
+Test <- glm(diabetes~pregnant, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by glucose
+Test <- glm(diabetes~glucose, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by pressure
+Test <- glm(diabetes~pressure, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by tricepts
+Test <- glm(diabetes~triceps, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by insulin
+Test <- glm(diabetes~insulin, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by mass
+Test <- glm(diabetes~mass, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by pedigree
+Test <- glm(diabetes~pedigree, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by age
+Test <- glm(diabetes~age, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+```
+
+# Interpret the Models
+```{r}
+# Pregnant: there is nothing wrong with the data but it might not be significant. No major change to the residual deviance.
+# Glucose: this had the most change in the residual deviance. I will be keeping this in the model.
+# Pressure: Is insignificant. we can tell this by the Pr value and the residual deviance.
+# Triceps: Is not significant since the Pr value is to high.
+# Insulin: Not very significant, the residual value is low but it might help later.
+# Mass: Significant, will probably add to model in next step
+# Pedigree: Not insignificant but not very significant, will explore more later.
+# Age: Pretty significant, no reason I shouldnt add this later.
+```
+
+# Second round of adding predictors
+```{r}
+# Model that predicts diabetes by glucose and pregnant
+Test <- glm(diabetes~glucose + pregnant, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by glucose and insulin
+Test <- glm(diabetes~glucose + insulin, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by glucose and mass
+Test <- glm(diabetes~glucose + mass, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+
+# Model that predicts diabetes by glucose and pedigree
+Test <- glm(diabetes~glucose + pedigree, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# Model that predicts diabetes by glucose and age
+Test <- glm(diabetes~glucose + age, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+```
+
+# Interpret the second model 
+```{r}
+# I will be keeping the mass model as it decreased the residual deviance, hence making the model explain more data
+```
+
+# Next predictor
+```{r}
+# Model that predicts diabetes by glucose, mass and pregnant
+Test <- glm(diabetes~glucose + mass + pregnant, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# Model that predicts diabetes by glucose, mass and insulin
+Test <- glm(diabetes~glucose + mass + insulin, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# Model that predicts diabetes by glucose, mass and pedigree
+Test <- glm(diabetes~glucose + mass + pedigree, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# Model that predicts diabetes by glucose, mass and age
+Test <- glm(diabetes~glucose + mass + age, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+```
+
+# Interpret third model 
+```{r}
+# I will be keeping the additional pregnant predictor in my model.I will add more as it is not insignificant yet
+```
+
+# Fourth model
+```{r}
+# Model that predicts diabetes by glucose, mass, pregnant, and insulin
+Test <- glm(diabetes~glucose + mass + pregnant + insulin, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# Model that predicts diabetes by glucose, mass, pregnant, and pedigree
+Test <- glm(diabetes~glucose + mass + pregnant + pedigree, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# Model that predicts diabetes by glucose, mass, pregnant, and age
+Test <- glm(diabetes~glucose + mass + pregnant + age, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+```
+
+# Final Model interpretation
+```{r}
+# I will not be keeping any of those model as they all either add nothing or are insignificant via their Pr value. 
+```
+
+# Final Model
+```{r}
+# Model that predicts diabetes by glucose, mass and pregnant
+mod_log <- glm(diabetes~glucose + mass + pregnant, data = Pima, family = "binomial")
+msummary(Test)
+confint(Test)
+```
+
+# Lets decide if we want to change the threshold
+```{r}
+logreg.probs = predict(mod_log,Pima,type="response")
+logreg.pred = rep("neg",752)
+logreg.pred[logreg.probs>.61]="pos"
+confusion <- table(logreg.pred, Pima$diabetes)
+confusion
+sum(diag(confusion))/nrow(Pima)
+```
+
+# Interpret
+```{r}
+# We will chose a threshold of .61 as this will get us an accuracy of 77.1% 
+```
+
+```{r}
+Diabetes_bi = as.numeric(Pima$diabetes)-1
+```
+
+
+# Visualize the logestic regression 
+```{r}
+ggplot(data = Pima, aes(x = glucose, y = Diabetes_bi))+  
+  geom_jitter(alpha = 0.1, height = 0.05) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"),se = FALSE) + 
+  ylab("Diabetes") + 
+  geom_hline(yintercept = .61)
+
+# the black line is the threshold value
+```
+
+# Interpret
+```{r}
+# If we were to get rid of outliers we can make this graph look better but the message stays the same.
+```
+
+
+
+
+# c) Decision tree model
+# Lets recap on the prectors
+```{r}
+# The predictors I chose before were great choices which lead to a 77% accuracy. I will be using those same predictors for my decison tree. 
+```
+
+# Create Decsion Tree Model
+```{r}
+form<-as.formula("diabetes~glucose + mass + pregnant")
+tree.mod <- rpart(form, data=Pima)
+tree.mod
+```
+# Verify Accuracy
+```{r}
+T_pred = predict(tree.mod,Pima,type="class")
+confusion <- table(Pima$diabetes,T_pred)
+confusion
+
+Accuracy <- sum(diag(confusion))/sum(confusion)
+Accuracy
+
+# This model has a 80% accuracy!
+```
+
+# Visualize the tree
+```{r}
+rpart.plot(tree.mod)
+```
+
+
+
+
+# d) Random Forest model
+# Lets recap on the prectors
+```{r}
+mod_forest<-randomForest(form, data=Pima, ntree=1000, mtry=3)
+mod_forest
+```
+
+# Interpret model 
+```{r}
+# Based on this model and the confusion matrix this is a great model! the accuracy is around 73.27!
+```
+
+
+
+
+# e) Compare the effectiveness of each model and state my conclusion
+# Logistic Model
+```{r}
+logreg.probs = predict(mod_log,Pima,type="response")
+logreg.pred = rep("neg",752)
+logreg.pred[logreg.probs>.61]="pos"
+confusion <- table(logreg.pred, Pima$diabetes)
+confusion
+sum(diag(confusion))/nrow(Pima)
+
+# As we can see by the confusion matrix the accuracy is 77.13%! This is a good model!
+```
+
+# Decision Tree Model
+```{r}
+T_pred = predict(tree.mod,Pima,type="class")
+confusion <- table(Pima$diabetes,T_pred)
+confusion
+
+Accuracy <- sum(diag(confusion))/sum(confusion)
+Accuracy
+
+# Ther is a 80.45% Accuracy! This model is better then the logistic Regression model in terms of accuracy!
+```
+
+# Random Forest Model
+```{r}
+sum(diag(mod_forest$confusion))/nrow(Pima)
+# The Random Forst Model has an accuracy of 73.27! This is great as well but not as good as the other ones!
+```
+
+# Conclusion
+```{r}
+# I would feel the decision tree is best because it gets a good grasp of the data correct via its accuracy but all are good models.
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

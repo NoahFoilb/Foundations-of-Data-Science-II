@@ -1,0 +1,231 @@
+---
+title: "Homework 6"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Load Libraries
+```{r}
+library(dplyr)
+library(mdsr)
+library(NHANES)
+library(broom)
+library(mosaicData)
+library(mosaic)
+library(mdsr)
+library(ggplot2)
+library(randomForest)
+library(mosaicCore)
+library(readr)
+library(rpart.plot)
+library(rpart)
+library(nnet)
+library(NeuralNetTools)
+library(class)
+library(e1071)
+library(neuralnet)
+
+```
+
+logistic regression, decision tree
+Sales price
+
+
+
+# Lets look a the dataset. I do not want to use attributes with a lot of Na Values.
+```{r}
+sum(table(NHANES$SleepTrouble, useNA = "always"))                    # How many rows are there in the dataset
+table(NHANES$SleepTrouble, useNA = "always")                         # How many Na's are there in the data
+
+# There were 5799 people who said no to having sleep trouble, 1973 people saying yes, and 2228 people who did not have answers.
+```
+# Time to select the columns I want to use
+```{r}
+NHANES %>%
+  select(everything()) %>%                          
+  summarise_all(funs(sum(is.na(.))))
+
+Hanes <- NHANES %>%
+  select(SleepTrouble,Gender,Age,HHIncomeMid,BMI, Depressed) %>% 
+  na.omit()
+
+# In this chunk I displayed the Na's per attribute and then created a dataset called Hanes Which keeps user specific columns to use.
+```
+# Create a test/train dataset
+```{r}
+set.seed(100)
+train <- Hanes %>% sample_frac(size = 0.75)
+test <- Hanes %>% setdiff(train)
+```
+
+
+
+# 8.1 
+# Part 1: Neural Network
+# a) Classifier
+```{r}
+form<-as.formula("SleepTrouble ~ .")
+catnn<-nnet(form, data=train, size=5)
+```
+
+# b) Accuracy
+```{r}
+Sleep_nn<-predict(catnn, newdata=test, type="class")
+confusion<-tally(Sleep_nn~SleepTrouble, data=test, format="count")
+sum(diag(confusion))/nrow(test)
+
+```
+
+# c) Visualization
+```{r}
+# In order to viusally represent the data to you I will be using the confusion matrix
+confusion
+```
+
+# d) Analysis
+```{r}
+# This is about as accurate as the null model. So not great
+```
+
+
+
+# Part 2: Naive Bayes
+# a) Classifier
+```{r}
+mod_nb <- naiveBayes(form, data=train)
+```
+
+# b) Accuracy
+```{r}
+income_nb <- predict(mod_nb, newdata=train)
+confusion <- tally(income_nb ~ SleepTrouble, data=train, format="count")
+sum(diag(confusion))/nrow(train)
+```
+
+# c) Visualization
+```{r}
+confusion
+```
+
+# d) Analysis
+```{r}
+# This is less accurate then the null model. So this is not a good model
+```
+
+
+
+# Part 3: Nearest Neighbor
+```{r}
+train_new <- train %>%
+  select(Age, HHIncomeMid, BMI)
+
+test_new <- test %>%
+  select(Age, HHIncomeMid, BMI)
+```
+
+# a) Classifier
+```{r}
+income_knn <- knn(train = train_new, test=test_new, cl=train$SleepTrouble, k=1)
+```
+
+# b/c) Accuracy/visualization
+```{r}
+confusion <- tally(income_knn, data=train, format="count")
+confusion
+# This is practically the same as the null model
+```
+
+# d) Analysis
+```{r}
+# This model is very skewed as it does not have any predictions for yes. Hence this is the same as the null model
+```
+
+
+
+# 8.2
+```{r}
+Hanes <- NHANES %>%
+  select(SleepHrsNight,Gender,Age,HHIncomeMid,BMI, Depressed) %>% 
+  na.omit()
+
+Hanes2 <- NHANES %>%
+  select(SleepHrsNight,HHIncomeMid,Depressed) %>%   # I used a logistic model to see what predictors I liked 
+  na.omit()
+```
+# Create a test/train dataset
+```{r}
+set.seed(100)
+train <- Hanes %>% sample_frac(size = 0.75)
+test <- Hanes %>% setdiff(train)
+```
+
+# Neural Network
+# a) Classifier
+```{r}
+form<-as.formula("SleepHrsNight ~ Age + HHIncomeMid + BMI")
+nn<-neuralnet(form, data=train)#,hidden = c(5,3),linear.output = T)
+```
+
+# b) Accuracy
+```{r}
+pr.nn <- compute(nn,test[,3:5])
+# pr.n
+
+pr.nn_ <- pr.nn$net.result*(max(train$SleepHrsNight)-min(train$SleepHrsNight))+min(train$SleepHrsNight)
+test.r <- (test$SleepHrsNight)*(max(train$SleepHrsNight)-min(train$SleepHrsNight))+min(train$SleepHrsNight)
+MSE.nn <- sum((test.r - pr.nn_)^2)/nrow(test)
+print(paste(MSE.nn))
+
+# MSE value of 172.38
+```
+
+# c) Visualization
+```{r}
+plot(nn)
+```
+
+# d) Analysis
+```{r}
+# Looking at the error in the graph and the MSE this isnt a great model with the predictors I used. With a MSE value of 172.38 it isnt a great model
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

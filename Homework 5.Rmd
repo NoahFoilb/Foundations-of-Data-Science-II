@@ -1,0 +1,459 @@
+---
+title: "Homework 5"
+output:
+  word_document: default
+  html_document: default
+  always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Load Libraries
+```{r}
+library(dplyr)
+library(mdsr)
+library(NHANES)
+library(broom)
+library(mosaicData)
+library(mosaic)
+library(mdsr)
+library(ggplot2)
+library(randomForest)
+library(mosaicCore)
+library(readr)
+library(rpart.plot)
+library(rpart)
+```
+
+
+# 8.1 
+# Lets look a the dataset. I do not want to use attributes with a lot of Na Values.
+```{r}
+sum(table(NHANES$SleepTrouble, useNA = "always"))                    # How many rows are there in the dataset
+table(NHANES$SleepTrouble, useNA = "always")                         # How many Na's are there in the data
+
+# There were 5799 people who said no to having sleep trouble, 1973 people saying yes, and 2228 people who did not have answers.
+```
+# Time to select the columns I want to use
+```{r}
+NHANES %>%
+  select(everything()) %>%                          
+  summarise_all(funs(sum(is.na(.))))
+
+Hanes <- NHANES %>%
+  select(SleepTrouble,Gender,Age,HHIncomeMid,BMI, Depressed) %>% 
+  na.omit()
+
+# In this chunk I displayed the Na's per attribute and then created a dataset called Hanes Which keeps user specific columns to use.
+```
+# Create a test/train dataset
+```{r}
+set.seed(100)
+train <- Hanes %>% sample_frac(size = 0.75)
+test <- Hanes %>% setdiff(train)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 1. Make Null Model
+# a) Build a Classifier
+```{r}  
+mod_null <- glm(SleepTrouble~1,data=train,family=binomial)                      # Creates a null model
+mod_null
+```
+# b) Accuracy
+```{r}
+table(train$SleepTrouble)/sum(table(train$SleepTrouble))*100                    # How much of the data says yes vs no (Percent)
+p=exp(-1.075)/(1+exp(-1.075))                                                   # What percent will say yes?
+p                            
+
+# This model is 73% accurate 
+```
+# c) Make an appropriate visualization of the model
+```{r}
+# Since the Null model would be to guess that people will not have sleep trouble the graph would just be
+ggplot(data = train,x = SleepTrouble, y = Depressed ,aes(x = SleepTrouble,y = Depressed)) + 
+  geom_count(aes(color = Age))+ 
+  geom_jitter(alpha = 0.1, height = 0.05)
+
+ggplot(data = train,x = SleepTrouble, y = Gender ,aes(x = SleepTrouble,y = Gender)) + 
+  geom_count(aes(color = HHIncomeMid))+ 
+  geom_jitter(alpha = 0.1, height = 0.05)
+# I was not able to add in the verticle line on the NO but I tried to and it wouldnt work with this type of graph
+```
+# d) Interpret the results
+```{r}
+# I have not learned much except this model is 75% accurate since we will be guessing that it is No every time. 
+# This is not a predictive model, only guessing. 
+```
+
+
+
+
+
+
+
+
+
+
+# 2. Logistic Model
+# a) Classifier
+```{r}
+logreg.fit <- glm(SleepTrouble ~ ., family = "binomial", data = train, control = list(maxit = 50000))
+summary(logreg.fit)
+```
+# b) Accuracy 
+```{r}
+logreg.probs = predict(logreg.fit,train,type="response")
+logreg.pred = rep("no",4592)
+logreg.pred[logreg.probs>.255]="Yes"
+confusion <- table(logreg.pred, train$SleepTrouble)
+confusion
+sum(diag(confusion))/nrow(train)
+
+# just created a confusion matrix and found the accuracy by summing the diagonals
+```
+# c) Make an appropriate visualization of the model
+```{r}
+ggplot(data = train, aes(x = Age, y = SleepTrouble)) + 
+  geom_jitter(alpha = 0.1, height = 0.05) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE) + 
+  ylab("Sleep Status") 
+
+# I used the same exact graphics as the book but the logistic model would not show up
+```
+# d) Interpret the results
+```{r}
+# this model has a 63% accuracy which is not higher then the null model so this model is practically pointless since randomly guessing No has a higher chance of being correct then this model.
+```
+
+
+
+
+
+
+
+
+
+
+# 3 Decision Tree
+# a) Classifier
+```{r}
+form<-as.formula("SleepTrouble ~ .")
+Dec_tree <- rpart(form, data=train)
+Dec_tree
+```
+# b) Accuracy
+```{r}
+T_pred = predict(Dec_tree,train,type="class")
+confusion <- table(train$SleepTrouble,T_pred)
+confusion
+
+Accuracy <- sum(diag(confusion))/sum(confusion)
+Accuracy
+```
+# c) 
+```{r}
+rpart.plot(Dec_tree)
+```
+# d) Interpret the Model
+```{r}
+# This model is better! This has an accuracy of 74.5% which is higher then the null model 
+```
+
+
+
+
+
+
+
+
+
+
+
+# 4) Random Forest
+# a) Classifier 
+```{r}
+mod_forest<-randomForest(form, data=Hanes, ntree=201, mtry=3)
+mod_forest
+```
+# b) Accuracy
+```{r}
+sum(diag(mod_forest$confusion))/nrow(Hanes)
+```
+# Visualization
+```{r}
+#getTree(mod_forest)
+
+#the function above visualized the whole mod_forest but I made it a comment since it took up so much space
+```
+# Interpret results 
+```{r}
+# The accuracy is much better then the other models! This has an accuracy of 84.84% which is 10% higher then the other models!
+```
+
+
+
+
+
+
+
+
+
+
+# 8.2
+# Time to select the columns I want to use
+```{r}
+Hanes <- NHANES %>%
+  dplyr::select(SleepHrsNight,Gender,Age,HHIncomeMid,BMI, Depressed) %>% 
+  na.omit()
+
+Hanes2 <- NHANES %>%
+  dplyr::select(SleepHrsNight,HHIncomeMid,Depressed) %>%   # I used a logistic model to see what predictors I liked 
+  na.omit()
+```
+# Create a test/train dataset
+```{r}
+set.seed(100)
+train <- Hanes %>% sample_frac(size = 0.75)
+test <- Hanes %>% setdiff(train)
+
+set.seed(100)
+train2 <- Hanes2 %>% sample_frac(size = 0.75)
+test2 <- Hanes2 %>% setdiff(train2)
+```
+
+
+
+
+
+
+
+
+
+# 1. Make Null Model
+# a) Build a Regression
+```{r}  
+mod_nullr <- lm(SleepHrsNight~1,data=train)
+mod_nullr
+```
+# b) Accuracy
+```{r}
+msummary(mod_nullr) 
+# As we see in the display te t value is 346.8 which indicates a large difference between this model and the null model hence this is not accurate for a null model
+```
+# c) Make an appropriate visualization of the model
+```{r}
+ggplot(data = train,x = SleepHrsNight, y = Depressed ,aes(x = SleepHrsNight,y = Age)) + 
+  geom_vline(xintercept = 6.928, color = "red")+ 
+  geom_jitter(alpha = 0.1, height = 0.05)
+
+# The red line is the Null model
+```
+# d) Interpret the results
+```{r}
+# As Null models stand it isnt bad as it highlights the majority of the data but not predictive enough.
+```
+
+
+
+
+
+
+# 2. Multiple regression
+# a) Regression
+```{r}
+mul_mod <- lm(SleepHrsNight~., data = train2)
+msummary(mul_mod)
+```
+# b) Accuracy 
+```{r}
+# This model is not significant nor accurate. Not only is the R^2 not good but the most of the predictors are not statistically significant.
+```
+# c) Make an appropriate visualization of the model
+```{r}
+library(ggiraph)
+library(ggiraphExtra)
+library(plyr)
+ggPredict(mul_mod, se = TRUE)
+
+# These are multiple lienar regressions shown for each type of depression based on the model
+```
+# d) Interpret the results
+```{r}
+# Age and BMI are not good predictors and this model isnt good as well since the R^2 value is 1%
+```
+
+
+
+
+
+
+
+# 3 Regression Tree
+```{r}
+form<-as.formula("SleepHrsNight ~ .")
+Dec_tree <- rpart(form, data=train)
+Dec_tree
+```
+# b) Accuracy
+```{r}
+T_pred = predict(Dec_tree,train)
+confusion <- table(train$SleepHrsNight,T_pred)
+Accuracy <- sum(diag(confusion))/sum(confusion)
+Accuracy
+# The accuracy is terrible
+```
+# c) 
+```{r}
+rpart.plot(Dec_tree)
+```
+# d) Interpret the Model
+```{r}
+# This is a very basic model and it isnt a good one since the accuracy is below 1%
+```
+
+
+
+
+
+
+
+# 4) Random Forest
+# a) 
+```{r}
+mod_forest<-randomForest(form, data=train, ntree=201, mtry=3)
+mod_forest
+
+# I used na.omit before but not on the whole dataset so I was able to get a good amount of rows 
+# How to decide ntree and mtry
+```
+# b) Accuracy
+```{r}
+# as said before 32.38% of the varaiance is explained which is so far one of the best models we have gotten so far
+T_pred = predict(mod_forest,train)
+confusion <- table(train$SleepHrsNight,T_pred)
+Accuracy <- sum(diag(confusion))/sum(confusion)
+Accuracy
+```
+# c) Visualization
+```{r}
+#getTree(mod_forest)
+# This will display the results
+```
+# d) Interpret the Model
+```{r}
+# The accuracy of this model is bad as well. we can tell this based off the accuracy and the amount of variance explained
+```
+
+
+
+
+
+
+
+
+
+# 8.3  ( I picked 8.2)
+# Null model
+```{r}
+pred1 <- predict(mod_nullr, newdata = test)
+results <- data.frame(pred = pred1, original = test$SleepHrsNight)
+results$resid<-round(results$pred-results$original,0)
+#results
+print(sum(results$resid^2))
+```
+
+# Multiple Regression
+```{r}
+pred1 <- predict(mul_mod, newdata = test)
+results <- data.frame(pred = pred1, original = test$SleepHrsNight)
+results$resid<-round(results$pred-results$original,0)
+#results
+print(sum(results$resid^2))
+```
+
+# Regression Tree
+```{r}
+pred1 <- predict(Dec_tree, newdata = test)
+results <- data.frame(pred = pred1, original = test$SleepHrsNight)
+results$resid<-round(results$pred-results$original,0)
+#results
+print(sum(results$resid^2))
+```
+
+# Random Forest
+```{r}
+pred1 <- predict(mod_forest, newdata = test)
+results <- data.frame(pred = pred1, original = test$SleepHrsNight)
+results$resid<-round(results$pred-results$original,0)
+#results
+print(sum(results$resid^2))
+```
+# Conclusion
+```{r}
+# By testing the models we can see that they are all equally bad since they all have a high residual^2 for sleeping hours 
+```
+
+
+
+# 8.5
+```{r}
+library(nasaweather)
+Nasa <- storms
+summary(Nasa)
+glimpse(Nasa)
+```
+
+# Make the classifier
+```{r}
+form <- as.formula("type ~ wind + pressure")
+tree_mod <- rpart(form, data = Nasa)
+tree_mod
+rpart.plot(tree_mod)
+```
+
+
+# Is this a good classifier?
+```{r}
+pred1 <- predict(tree_mod, type = "class")
+Acc <- table(pred1,Nasa$type)
+sum(diag(Acc))/sum(table(pred1,Nasa$type))*100
+
+# This gives us a model that has a 85.8% accuracy! Thats great!
+```
+
+# Display a graph
+```{r}
+ggplot(data = Nasa, aes(x = pressure, y = wind, color = type)) +
+  geom_point(alpha = 0.5)+
+  geom_hline(yintercept = 63,color = "black") +
+  geom_segment(x = 986, xend =  Inf, y = 33, yend = 33, color = "black") + 
+  geom_segment(x = 986, xend = 986, y = 63, yend = -Inf, color = "black")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

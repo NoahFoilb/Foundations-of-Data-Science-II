@@ -1,0 +1,361 @@
+---
+title: "Test 1"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Noah Foilb
+
+# Library
+```{r}
+# Load the libraries
+library(mosaicData)
+library(mosaic)
+library(mdsr)
+library(broom)
+library(ISLR)
+library(ggplot2)
+```
+
+# The ISLR package includes the Auto dataset, which includes gas mileage, horsepower and other information for cars. You will need to use this dataset to model the variable mpg (miles per gallon) as a function of other predictors in the dataset. 
+
+
+
+# Check dataset
+```{r}
+ # Check out the dataset
+glimpse(Auto)
+```
+
+# Compare the correlations 
+```{r}
+Numeric_Auto <- subset(Auto, select = -c(name)) %>%    # can not have fct type variables in cor function
+  na.omit()
+cor(Numeric_Auto)     # Show correlations
+
+# I notice a trend in mpg between the cylinders, displacement, horsepower, weight. They all seem to have higher correlations with eachother which concerns me because they might not bring new information to the model and we wont be able to use all of them
+
+```
+
+
+# The fact that dispalcement is equal to the combined volume of all its cylinders we only need to use one of them since they should have a high correlation
+```{r}
+print("________________________________________________________________________")
+Test <- lm(displacement~cylinders, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+# This is proof of my concern which I will keep in mind when going further
+```
+# This is proven true because of not only the .95 correlation but the .90 adjust R^2 value.
+
+
+# Compare mpg with other attributes
+```{r}
+print("________________________________________________________________________")
+Test <- lm(mpg~cylinders, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~displacement, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~horsepower, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~acceleration, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~year, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~origin, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# I tested all the data with the MPG to see which one would work best. I decided to keep weight because it had the highest R^2 value and better stats all around
+
+
+```
+
+# Compare the usable predictors with eachother to see if they are related.
+```{r}
+# Looking at the correlation table created before we can tell they all have relatively strong correlations with each other but that may not help the model
+```
+
+# I have kept WEIGHT!
+# Now that I know the data better compare with weight because it has the highest R^2 adjusted valye and it is statistically significant and there are no red flags 
+```{r}
+print("________________________________________________________________________")
+Test <- lm(mpg~weight+cylinders, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+displacement, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+horsepower, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+origin, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+year, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+acceleration, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+# I did another test but this time keeping weight plus another variable. I decided to keep Year because not only did it make the model more statistically signifigant but there seems to be more going on then what mets the eye 
+```
+
+
+# I have decided to keep the model which keeps the weight and year so now I want to be able to see if any of the other predictors will make the model any better
+```{r}
+Test <- lm(mpg~weight+year+displacement, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+year+cylinders, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+year+horsepower, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+year+acceleration, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+
+Test <- lm(mpg~weight+year+origin, data = Numeric_Auto)
+msummary(Test)
+confint(Test)
+print("________________________________________________________________________")
+# I will not be adding displacement nor cylinders into the model because they are statistically significant. I can tell this by looking at the 95% confidence interval. In both examples the confidence interval crosses zero making this insignificant. Really the only one I would want to inculude is origin but I will talk about that more later
+```
+
+# My draft model!
+```{r}
+Test <- lm(mpg~weight+year+origin, data = Auto)
+msummary(Test)
+confint(Test)
+
+# Nothing major is standing out in terms of errors or insignificance 
+```
+
+# Before we finalize on a model lets look at the categorical attributes
+```{r}
+#Test <- lm(mpg~name, data = Auto)
+#msummary(Test)
+#confint(Test)
+
+# The categorical attribute "name" is not statistically significant because of many reasons. The std error is way to high for most of the names and while the R^2 is high the F statistic is below ten which also means it is insignificant. 
+```
+
+
+# Origins 
+```{r}
+boxplot(Auto$mpg ~ Auto$origin)
+# I have decided to not include the Origins in the model. It only changed the R^2 value by a little but nothing major. Simple is better.
+```
+
+
+
+#Confounding attributes?
+```{r}
+Year_data <- Auto %>%
+  mutate(Year_groups = ifelse(year <= 76,"70's - 76's","77's - 82's"))
+  
+
+Graph <- ggplot(data = Auto, aes(x = weight, y = mpg)) +
+  geom_point() + geom_smooth(method = "lm") +
+  ylab("MPG") + xlab("WEIGHT") + aes(color = Year_data$Year_groups)
+
+Graph
+
+Graph <- ggplot(data = Auto, aes(x = weight, y = mpg)) +
+  geom_point() + geom_smooth(method = "lm") +
+  ylab("MPG") + xlab("WEIGHT") + aes(color = year)
+
+Graph
+
+#The year does seem to be a confounding attribute. One way we can check this is when we added Year into our model the sign of the intercept had changed and MPG had decreased drastically, this was because Year was a confounding attribute to the MPG and we can see such in the data below. This graph also visually proves that Weight is signifigant as well since the data shows high correlation with the MPG. 
+```
+
+
+
+# Train and test
+```{r}
+set.seed(500)
+n<-nrow(Auto)
+test_idx<-sample.int(n, size=round(0.2*n))
+train<-Auto[-test_idx,]
+
+test<-Auto[test_idx,]
+mod<-lm(mpg~weight+year, data = Auto)
+pred1 <- predict(mod, newdata = test)
+results <- data.frame(pred = pred1, original = test$mpg)
+results$resid<-round(results$pred-results$original,0)
+#results
+print(sum(results$resid^2))
+
+# Since this has such a low resid ^2 value this graph is validated and has more support for its model. 
+```
+
+
+
+
+# Direct Answers
+```{r}
+Test <- lm(mpg~weight+year, data = Auto)
+msummary(Test)
+
+# The best possible Multiple linear regression model is 
+#           
+#        y^ = -14.4 -.006*weight + .757*year
+#
+#
+# I Provided full documentation above ^
+
+
+```
+```{r}
+# There is a a relationship between the predictors and response. The biggest and clearest one is the confounding of the predictor "year" towards the weight and the MPG. By looking at the graph where I displayed the model you can see how year has a huge influence on not only the response but the predictors as well. When I added the year the intercept changed signs and the R^2 value increased by 10% 
+
+#  When I just modeled the weight with the MPG they were correlated and had a great R^2 value which was above 70%. There was no red flags when looking at the model and they were all related with each other. The only thing is the interval for weight is low but not fully insignificant. The year had the biggest statistically significance out of all the predictors. Since it was able to change the data without making it insignificant shows its significance. 
+
+# The intercept is -14.4 which means the value of the MPG will start at that value when being calculated
+# The weight is -.006 which means that value will be multiplied by the weight of the car and that value will be taken out the MPG being calculated. This makes sense because as the weight of a car goes down it should be using less gas hence going further and increasing the mpg
+# The year means that as the year increases the better the mpg will be (it is between the years 70 -82). This makes sense because as new cars are released the MPG should be getting better.
+
+# Then 80.72% of the variation is explained by the predictors
+
+confint(Test)
+```
+
+```{r}
+# the 95 % confidence interval intercept shows how confident they are that 95% of each attribute will fall within those intervals for their corresponding intervals. For example the intercept is -14.4 and the 95% confidence interval is [-22.2,-6.47] and -14.4 falls between those values.
+```
+
+# An example
+```{r}
+# Lets input the first row into the model.
+Predicted_MPG = -.006632*Auto$weight[1] +.757*Auto$year[1] - 14.35
+MPG = Auto$mpg[1]
+Residual = MPG - Predicted_MPG
+Residual
+# Since the actual value is 18 we get a residual of 2.598 which is pretty good for this model. 
+```
+
+
+
+# 2) Exercise 1.36 from OpenIntrotoStatistics (page 36)
+```{r}
+# a) This type of study is an experiment 
+# b) The way this experiment was done it might be so. This expierment places people in an elevator where they have to brace themselves. The subjects might not have muscle cramps but rather because of the physical action of the elevator. Further research would be required.  
+```
+
+
+# 3) Exercise 2.34 from OpenIntrotoStatistics (page 78)
+```{r}
+# a) One major feature that appears in the histogram and not the box plot is the frequecny of  the male/female by their marathon time. 
+# b) Since this is a mix between female and male participants and they have their own normal distributions it would create a bi modal histogram
+# c) Marathon time is less than 2.4 for most men but for females its more then 24. Men also have less variation then females
+# d) In this graph we can now tell how the data has changed over time. We can tell that it peaked around the 1970ish simply because of this type of graph
+# e) 
+```
+
+
+# 4) Exercise 8.32 from OpenIntrotoStatistics (page 335)
+```{r}
+# a) There seems to be a strong positive association between the number of cans of beer and their BAC (blood alcohol content), I believe this because all the data points show a linear pattern and since they are close to each other it makes it strong
+# b) y^ = -0.0127 + +0.0180x
+# c) Null hypothesis is H0: b1 = 0 and the alternative Hypothesis is Ha: b1 > 0. The P value is 0 because that is what it says in the table. Because of this I would reject the null hypothesis because there is evidence of there being an increase of BAC with the amount of beers they drink
+# d) R^2 = (.89)^2 = .7921 which shows that there is about 79.21% of the variation is explained by the number of cans of beer.
+# e) Since this was a state school study this does not show the whole population but rather a sample so I would not think there would be as strong of a relationship when comparing the random study to the state school study. 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
